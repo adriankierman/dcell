@@ -1,5 +1,10 @@
 # A chorus of actors all execute the same method in the script when action is called
 # The supplied block is run with the response from each actor that is in the chorus
+#
+# chorus=Chorus.new([kit1[:librarian],kit2[:librarian]])
+# chorus.set_greeting("hello")
+# chorus.get_greeting {|greeting| pp greeting}
+#
 class Chorus
   def initialize(actors_array,minimum_for_quorum=2,timeout=2)
     @all=actors_array
