@@ -7,6 +7,9 @@
 # marshalling to mailboxes so that if they're unserialized on a remote
 # node you instead get a proxy object that routes messages through the
 # DCell overlay network back to the node where the actor actually exists
+#
+# Multi-call functionality from jhosteny gist on the subject https://gist.github.com/2354274
+
 
 module Celluloid
   class << self
