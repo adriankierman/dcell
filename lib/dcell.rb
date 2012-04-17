@@ -25,6 +25,7 @@ require 'dcell/registries/gossip/core'
 require 'dcell/registries/gossip_adapter'
 
 require 'dcell/celluloid_ext'
+require 'dcell/chorus'
 
 # Distributed Celluloid
 module DCell
