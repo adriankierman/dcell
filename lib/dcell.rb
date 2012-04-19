@@ -26,6 +26,7 @@ require 'dcell/registries/gossip_adapter'
 
 require 'dcell/celluloid_ext'
 require 'dcell/chorus'
+require 'dcell/quorum'
 
 # Distributed Celluloid
 module DCell

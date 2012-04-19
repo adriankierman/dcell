@@ -33,9 +33,10 @@ class QuorumVersionSet
     }
     majority=nil
     majority_count=-1
-    @counts=sources.map {|k,v|
+    @counts={}
+    sources.each_pair {|k,v|
       majority=k if (v.count>majority_count)
-      [k,v.count]
+      @counts[k]=v.count
     }
     @value=majority
   end
