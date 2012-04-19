@@ -1,13 +1,16 @@
 # A chorus of actors all execute the same method in the script when action is called
 # The supplied block is run with the response from each actor that is in the chorus
 #
+# This means that you can call methods on the chorus of actors in almost the same way
+# as you would call methods on a single chorus member.
+#
 # chorus=Chorus.new([kit1[:librarian],kit2[:librarian]])
 # chorus.set_greeting("hello")
 # chorus.get_greeting {|greeting| pp greeting}
 #
 class Chorus
   def initialize(actors_array,minimum_for_quorum=2,timeout=2)
-    @all=actors_array
+    @actors=actors_array
     @minimum_for_quorum=minimum_for_quorum
     @timeout=timeout
   end
@@ -17,20 +20,9 @@ class Chorus
   end
 
   def action(meth, *args, &block)
-    msgs=Celluloid.multicall(@all, @minimum_for_quorum, @timeout) do |actors|
-      actors.each {|actor|
-        actor.method_missing(meth.to_s,*args)
-      }
-      handler_for_each_response(meth,*args, &block)
-    end
+    msgs=Celluloid.multicall(@actors, @minimum_for_quorum, @timeout,meth.to_s,*args)
+
     msgs
   end
 
-  def handler_for_each_response(meth,*args, &block)
-    lambda{|peer_response|
-      if block
-        block.call(peer_response)
-      end
-    }
-  end
 end

@@ -12,15 +12,18 @@ module TestNode
     STDERR.print "Waiting for test node to start up..."
 
     socket = nil
-    30.times do
+    60.times do
       begin
         socket = TCPSocket.open("127.0.0.1", PORT)
         break if socket
       rescue Errno::ECONNREFUSED
         STDERR.print "."
-        sleep 1
+        sleep 2
       end
     end
+    sleep 5
+
+
 
     if socket
       STDERR.puts " done!"

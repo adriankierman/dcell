@@ -13,51 +13,33 @@
 
 module Celluloid
   class << self
-    def multicall(actors, responses, timeout, &block)
-      r=[]
+    def multicall(actors, response_count, timeout, meth, *args, &block)
+      responses={}
       uuid = Celluloid.uuid
-      actors.each do |actor|
-        class << actor
-          alias_method :old_method_missing, :method_missing
-        end
-        actor.instance_eval %Q{
-          def method_missing(meth, *args, &block)
-            meth = meth.to_s
-            raise RuntimeError, "can't call async method with multicall" if meth.to_s.match(/!$/)
-            Actor.multicall @mailbox, \"#{uuid}\", meth, *args, &block
-          end
-        }
-      end
-      begin
-        response = yield actors
-      ensure
-        actors.each do |actor|
-          class << actor
-            alias_method :method_missing, :old_method_missing
-          end
-        end
-      end
-      response = nil unless response.is_a? Proc
-      if actor? and not timeout
-        responses.times do
-          value = Task.suspend(:callwait).value
-          response.call(value) if response
-        end
-      else
+      actors.each { |actor|
+        Actor.multicall actor.mailbox, uuid, meth, *args, &block
+      }
+      receive_multiple_responses(response_count, responses, timeout, uuid)
+      responses
+    end
+
+    def receive_multiple_responses(response_count, responses, timeout, uuid)
+      while should_wait_for_response(response_count)
         receive(timeout) do |msg|
-          if msg.respond_to?(:uuid) and msg.uuid == uuid
-            if response
-              response.call(msg.value)
-              r.push(msg)
-            end
-            responses -= 1
-            responses > 0 ? false : true
-          else
-            false
+          if message_is_valid(msg, uuid)
+            responses.push(msg)
+            response_count -= 1
           end
         end
       end
-      r
+    end
+
+    def message_is_valid(msg, uuid)
+      msg.respond_to?(:uuid) and msg.uuid == uuid
+    end
+
+    def should_wait_for_response(response_count)
+      (response_count > 0)
     end
   end
 
@@ -109,10 +91,11 @@ module Celluloid
   # Don't derive from Response, since that gets handled
   # automatically by the reactor.
   class MultiResponse
-    attr_reader :uuid, :value
+    attr_reader :uuid, :value, :from_mailbox
+    attr_accessor :vector
 
-    def initialize(uuid, value)
-      @uuid, @value = uuid, value
+    def initialize(uuid, value, from_mailbox)
+      @uuid, @value, @from_mailbox = uuid, value, from_mailbox
     end
   end
 
@@ -142,21 +125,28 @@ module Celluloid
         Logger.crash("#{obj.class}: async call aborted!", ex)
       end
       begin
-        @caller << MultiResponse.new(@uuid, result)
+        @caller << MultiResponse.new(@uuid, result, _registration_name(obj))
       rescue MailboxError
         # It's possible the caller exited or crashed before we could send a
         # response to them.
       end
     end
+
+    def _registration_name(obj)
+          "#{Thread.mailbox.address}@#{DCell.id}@#{DCell.addr}"
+    end
   end
 
   class Mailbox
+    attr_reader :dcell_mailbox_id
     # This custom dumper registers actors with the DCell registry so they can
     # be reached remotely.
     def _dump(level)
-      mailbox_id = DCell::Router.register self
-      "#{mailbox_id}@#{DCell.id}@#{DCell.addr}"
+      @dcell_mailbox_id = DCell::Router.register self
+      "#{@dcell_mailbox_id}@#{DCell.id}@#{DCell.addr}"
     end
+
+
 
     # Create a mailbox proxy object which routes messages over DCell's overlay
     # network and back to the original mailbox
