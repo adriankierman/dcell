@@ -14,7 +14,7 @@
 module Celluloid
   class << self
     def multicall(actors, response_count, timeout, meth, *args, &block)
-      responses={}
+      responses=[]
       uuid = Celluloid.uuid
       actors.each { |actor|
         Actor.multicall actor.mailbox, uuid, meth, *args, &block
