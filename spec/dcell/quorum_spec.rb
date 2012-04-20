@@ -40,7 +40,7 @@ describe Quorum do
       q=Quorum.new([actor,secondary_actor])
 
       response=q.value
-      [42,43].should include(response.value)
-      response.counts.values.should eql([1,1])
+      [42,43].should include(response)
+      response.dcell_versions.counts.values.should eql([1,1])
     end
 end

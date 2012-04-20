@@ -13,9 +13,19 @@ class Quorum < Chorus
   end
 
   def deconflict(msgs)
-    QuorumVersionSet.new(msgs)
+    versions=QuorumVersionSet.new(msgs)
+    # many people prefer to just get a value back from the distributed method call - make a best effort to do this
+    # probably more convention over configuration this way
+    value=versions.value
+    make_versioned(value, versions)
+    value
   end
 
+  def make_versioned(value, versions)
+    value.class.instance_eval("attr_accessor :dcell_versions") if !value.respond_to?(:dcell_versions)
+    value.dcell_versions=versions
+    value
+  end
 
 
 end
@@ -34,7 +44,7 @@ class QuorumVersionSet
     majority=nil
     majority_count=-1
     @counts={}
-    sources.each_pair {|k,v|
+    @sources.each_pair {|k,v|
       majority=k if (v.count>majority_count)
       @counts[k]=v.count
     }
